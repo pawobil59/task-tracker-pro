@@ -1,36 +1,158 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Task Tracker Pro
+
+A premium task management application built with Next.js, Supabase, and Stripe. This project demonstrates fullstack development with authentication, database management, and payment processing.
+
+## Features
+
+- **User Authentication** - Sign up, sign in, and user management with Supabase
+- **Task Management** - Create, read, update, and delete tasks
+- **Subscription Tiers** - Free (5 tasks) and Premium (unlimited) plans
+- **Payment Processing** - Stripe integration for subscription management
+- **Modern UI** - Clean, responsive interface with Tailwind CSS
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, React, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth
+- **Payments**: Stripe
+- **Icons**: Lucide React
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 18 or higher
+- npm or yarn
+- Supabase account
+- Stripe account
+
+### Installation
+
+1. **Clone and install dependencies:**
+   ```bash
+   git clone <your-repo-url>
+   cd task-tracker-pro
+   npm install
+   ```
+
+2. **Set up environment variables:**
+   ```bash
+   cp env.example .env.local
+   ```
+   
+   Fill in your environment variables in `.env.local`:
+   - Get Supabase credentials from your Supabase project dashboard
+   - Get Stripe credentials from your Stripe dashboard
+
+3. **Set up Supabase:**
+   - Create a new Supabase project
+   - Run the SQL schema (see Database Setup below)
+   - Enable Row Level Security (RLS)
+
+4. **Set up Stripe:**
+   - Create products and prices in your Stripe dashboard
+   - Set up webhooks for subscription events
+
+5. **Run the development server:**
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000) to see the application.
+
+## Database Setup
+
+Run this SQL in your Supabase SQL editor:
+
+```sql
+-- Enable RLS
+ALTER TABLE auth.users ENABLE ROW LEVEL SECURITY;
+
+-- Create users table
+CREATE TABLE public.users (
+  id UUID REFERENCES auth.users(id) PRIMARY KEY,
+  email TEXT NOT NULL,
+  subscription_status TEXT DEFAULT 'free' CHECK (subscription_status IN ('free', 'premium')),
+  subscription_id TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create tasks table
+CREATE TABLE public.tasks (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  completed BOOLEAN DEFAULT FALSE,
+  category TEXT DEFAULT 'other' CHECK (category IN ('work', 'personal', 'shopping', 'other')),
+  priority TEXT DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS on tables
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies
+CREATE POLICY "Users can view own profile" ON public.users
+  FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile" ON public.users
+  FOR UPDATE USING (auth.uid() = id);
+
+CREATE POLICY "Users can view own tasks" ON public.tasks
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own tasks" ON public.tasks
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own tasks" ON public.tasks
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own tasks" ON public.tasks
+  FOR DELETE USING (auth.uid() = user_id);
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Project Structure
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+src/
+├── app/                    # Next.js app directory
+│   ├── api/               # API routes
+│   │   ├── auth/          # Authentication endpoints
+│   │   ├── tasks/         # Task CRUD endpoints
+│   │   └── stripe/        # Stripe webhooks
+│   ├── dashboard/         # Dashboard pages
+│   └── page.tsx           # Home page
+├── components/            # React components
+├── lib/                   # Utility libraries
+│   ├── supabase.ts        # Supabase client
+│   └── stripe.ts          # Stripe configuration
+├── types/                 # TypeScript type definitions
+└── hooks/                 # Custom React hooks
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Development
 
-## Learn More
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
 
-To learn more about Next.js, take a look at the following resources:
+## Next Steps
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Set up your Supabase project and database
+2. Configure Stripe products and webhooks
+3. Add your environment variables
+4. Start building features!
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Learning Resources
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Supabase Documentation](https://supabase.com/docs)
+- [Stripe Documentation](https://stripe.com/docs)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
